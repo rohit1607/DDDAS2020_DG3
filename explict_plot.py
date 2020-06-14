@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from definition import c_ni, ROOT_DIR
-from utils.custom_functions import createFolder, picklePolicy, read_pickled_File, extract_velocity
+from utils.custom_functions import createFolder, picklePolicy, read_pickled_File, extract_velocity, calc_mean_and_std
 from os.path import join
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 import matplotlib.colors as colors
@@ -10,7 +10,7 @@ import matplotlib.cm as cmx
 from utils.setup_grid import setup_grid
 import ast
 
-def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, train_id_list, fpath, fname='Trajectories'):
+def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, test_id_list,n_test_paths, fpath, fname='Trajectories'):
     """
     Makes plots across all rzns with different colors for test and train data
     returns list for all rzns.
@@ -56,7 +56,7 @@ def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_d
     traj_list = []
     sars_traj_list = []
 
-    for rzn in test_id_list[0:20]:
+    for rzn in test_id_list[0:n_test_paths]:
         # print("rzn: ", rzn)
 
         g.set_state(g.start_state)
@@ -98,9 +98,9 @@ def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_d
                 # dont_plot=True
                 break
 
-            if (not g.is_terminal()) and  g.if_within_actionable_time():
+            if (not g.is_terminal(almost = True)) and  g.if_within_actionable_time():
                 a = policy[g.current_state()]
-            elif g.is_terminal():
+            elif g.is_terminal(almost = True):
                 break
             else:
             #  i.e. not terminal and not in actinable time.
@@ -146,47 +146,49 @@ def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_d
         plt.cla()
         plt.close(fig)
         print("*** pickling traj_list ***")
-        picklePolicy(traj_list, join(fpath,fname))
-        picklePolicy(sars_traj_list,join(fpath,'sars_traj_'+fname) )
+        picklePolicy(traj_list, join(fpath,fname + 'coord_traj'))
+        # picklePolicy(sars_traj_list,join(fpath,'sars_traj_'+fname) )
         print("*** pickled ***")
 
     return t_list, G_list, bad_count
 
 
+# g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid(num_actions=16)
 
-g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid(num_actions=16)
+# rel_path = 'Experiments/88/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+# exp_num_case_dir = join(ROOT_DIR, rel_path)
 
-rel_path = 'Experiments/59/QL/num_passes_50/QL_Iter_x1/dt_size_2000/ALPHA_0.05/eps_0_0.1'
-exp_num_case_dir = join(ROOT_DIR, rel_path)
+# tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
+# with open(tlist_file, 'r') as f:
+#     phase1_tlist = ast.literal_eval(f.read())
 
-tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
-with open(tlist_file, 'r') as f:
-    phase1_tlist = ast.literal_eval(f.read())
+# policy = read_pickled_File(join(exp_num_case_dir, 'Policy_02'))
+# test_id_list = read_pickled_File(join(exp_num_case_dir, 'test_id_list'))
+# fpath = rel_path
 
-policy = read_pickled_File(join(exp_num_case_dir, 'Policy_02'))
-test_id_list = read_pickled_File(join(exp_num_case_dir, 'test_id_list'))
-fpath = rel_path
+# global n_test_paths
+# n_test_paths = 30
 
-n_test_paths = 20
-
-plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, test_id_list, fpath, fname='Explicit_plot_2')
-
-
+# t_list, G_list, bad_count = plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, test_id_list, fpath, fname='Explicit_plot_2')
+# print(t_list)
+# print("stats from explicit plot: ")
+# print(calc_mean_and_std(t_list))
 
 
-summ = 0
-cnt = 0
-print(len(phase1_tlist))
-print(test_id_list[:n_test_paths])
-for i in range(n_test_paths):
-    rzn = test_id_list[i]
-    t =  phase1_tlist[rzn]
-    print(t)
-    if t != None:
-        summ += phase1_tlist[rzn]
-        cnt += 1
-print("----- phsae1 data -----")
-print('n_test_paths= ',n_test_paths)
-print("mean= ", summ/cnt)
-print("cnt = ", cnt)
-print("pfail or badcount% = ", cnt/n_test_paths)
+
+# summ = 0
+# cnt = 0
+# print(len(phase1_tlist))
+# print(test_id_list[:n_test_paths])
+# for i in range(n_test_paths):
+#     rzn = test_id_list[i]
+#     t =  phase1_tlist[rzn]
+#     print(t)
+#     if t != None:
+#         summ += phase1_tlist[rzn]
+#         cnt += 1
+# print("----- phase 1 data and explict plot -----")
+# print('n_test_paths= ',n_test_paths)
+# print("mean= ", summ/cnt)
+# print("cnt = ", cnt)
+# print("pfail or badcount% = ", cnt/n_test_paths)

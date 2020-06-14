@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 import ast
+import random
+from explict_plot import plot_and_return_exact_trajectory_set_train_data
 
 # def sas_match(query_s1_a_s2, s1_a_r_s2):
 #     """
@@ -52,6 +54,24 @@ import ast
 #         Q, N, max_delQ = Q_update(Q, N, max_delQ, sars, ALPHA/10, g, N_inc)
 #     return Q, N
 
+# def get_similar_rzn_ids_V2(query_s1_a_s2, g, vel_field_data, nmodes):
+
+#     s1, a, s2 = query_s1_a_s2
+#     t, i, j = s1
+#     s2_t, s2_i, s2_j = s2
+#     matched_rzns = []
+#     for rzn in train_id_list:
+#         # vx = Vx_rzns[rzn,i,j]
+#         # vy = Vy_rzns[rzn,i,j]
+#         vx, vy = extract_velocity(vel_field_data, t, i, j, rzn)
+#         g.set_state(s1)
+#         g.move_exact(a, vx, vy)
+#         t2, i2, j2 = g.current_state()
+#         if s2_t==t2 and (s2_i == i2 or s2_i == i2 + 1  or s2_i == i2 - 1  or s2_j == j2  or  s2_j == j2 + 1  or s2_j == j2 - 1):
+#             matched_rzns.append(rzn)
+
+#     return matched_rzns
+
 
 def get_similar_rzn_ids(query_s1_a_s2, g, vel_field_data, nmodes):
 
@@ -69,23 +89,7 @@ def get_similar_rzn_ids(query_s1_a_s2, g, vel_field_data, nmodes):
 
     return matched_rzns
 
-def get_similar_rzn_ids_V2(query_s1_a_s2, g, vel_field_data, nmodes):
-
-    s1, a, s2 = query_s1_a_s2
-    t, i, j = s1
-    s2_t, s2_i, s2_j = s2
-    matched_rzns = []
-    for rzn in train_id_list:
-        # vx = Vx_rzns[rzn,i,j]
-        # vy = Vy_rzns[rzn,i,j]
-        vx, vy = extract_velocity(vel_field_data, t, i, j, rzn)
-        g.set_state(s1)
-        g.move_exact(a, vx, vy)
-        t2, i2, j2 = g.current_state()
-        if s2_t==t2 and (s2_i == i2 or s2_i == i2 + 1  or s2_i == i2 - 1  or s2_j == j2  or  s2_j == j2 + 1  or s2_j == j2 - 1):
-            matched_rzns.append(rzn)
-
-    return matched_rzns
+# 
 
 def update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s1, rzn, eps):
     """
@@ -141,10 +145,15 @@ def update_Q_in_future_rollouts(g, Q, N, s1_a_s2, vel_field_data, nmodes, loop_c
     matched_rzns = get_similar_rzn_ids(s1_a_s2, g, vel_field_data, nmodes)
     # matched_rzns = get_similar_rzn_ids_V2(s1_a_s2, g, vel_field_data, nmodes)
     # print("len(matched_rzns)", len(matched_rzns))
-    if loop_count < 80:
-        print("matched_rzns: at transition: ", s1_a_s2, '; n_mathces= ', len(matched_rzns))
-    if len(matched_rzns) != 0:
-        for rzn in matched_rzns:
+    num_matched_rzns = len(matched_rzns)
+    print("matched_rzns: at transition: ", s1_a_s2, '; n_mathces= ', num_matched_rzns)
+    if num_matched_rzns != 0:
+        if num_matched_rzns > sample_size:
+            sample_matched_rzns = random.sample(matched_rzns, sample_size)
+        else:
+            sample_matched_rzns = random.sample(matched_rzns, num_matched_rzns)
+        print("sample_matched_rzns: ", sample_matched_rzns)
+        for rzn in sample_matched_rzns:
             Q, N = update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s2, rzn, eps_0)
             
     return Q, N
@@ -227,11 +236,11 @@ def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname)
                 bad_count += 1
                 # dont_plot=True
                 break
-            if (not g.is_terminal()) and  g.if_within_actionable_time():
+            if (not g.is_terminal(almost = True)) and  g.if_within_actionable_time():
                 Qcopy, Ncopy = update_Q_in_future_rollouts(gcopy, Qcopy, Ncopy, (s1, a, s2), vel_field_data, nmodes, loop_count)
                 s1 = s2 #for next iteration of loop
                 a, q_s_a = max_dict(Qcopy[s1])
-            elif g.is_terminal():
+            elif g.is_terminal(almost = True):
                 break
             else:
             #  i.e. not terminal and not in actinable time.
@@ -278,9 +287,10 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
 
     Q = read_pickled_File(join(exp_num_case_dir, 'Q2'))
     N = read_pickled_File(join(exp_num_case_dir, 'N2'))
+    policy = read_pickled_File(join(exp_num_case_dir, 'Policy_02'))
     test_id_list = read_pickled_File(join(exp_num_case_dir, 'test_id_list'))
     train_id_list = read_pickled_File(join(exp_num_case_dir, 'train_id_list'))
-    sars_traj_list = read_pickled_File(join(exp_num_case_dir, 'sars_traj_Train_Trajectories_after_exp'))
+    # sars_traj_list = read_pickled_File(join(exp_num_case_dir, 'sars_traj_Train_Trajectories_after_exp'))
     train_output_params = read_pickled_File(join(exp_num_case_dir, 'output_paramaters'))
 
     ALPHA = train_output_params[9]
@@ -288,7 +298,7 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     eps_0 = 0.1
 
     print("ALPHA, N_inc = ", ALPHA, N_inc)
-    print('len(sars_traj_list) = ', len(sars_traj_list))
+    # print('len(sars_traj_list) = ', len(sars_traj_list))
     print("len(train_id_list)= ", len(train_id_list))
     print("len(test_id_list)= ", len(test_id_list))
     print('n_test_paths = ', n_test_paths)
@@ -299,46 +309,69 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     picklePolicy(phase2_results,join(exp_num_case_dir, opfname))
     writePolicytoFile(phase2_results,join(exp_num_case_dir, opfname))
     avg_time_ph2, std_time_ph2, cnt_ph2 , none_cnt_ph2 = phase2_results
+
+    print("test_id_list[0:n_test_paths] = ", test_id_list[0:n_test_paths])
+    print("----- phase 2 data ---------")
     print("avg_time_ph2", avg_time_ph2,'\n', 
            "std_time_ph2", std_time_ph2, '\n',
             "cnt_ph2",cnt_ph2 , '\n',
            "none_cnt_ph2", none_cnt_ph2)
-    
 
+
+    # Compare
+    g, xs, ys, X, Y, vel_field_data, nmodes, _, _, _, _ = setup_grid_params
+    p1_t_list, p1_G_list, p1_bad_count = plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, 
+                                            vel_field_data, nmodes, test_id_list,n_test_paths, 
+                                            exp_num_case_dir, fname='Explicit_Phase_1_test_' + str(run_number))
+    phase1_results = calc_mean_and_std(p1_t_list)
+    avg_time_ph1, std_time_ph1, cnt_ph1 , none_cnt_ph1 = phase1_results
+    print("----- phase 1 data ---------")
+    print("avg_time_ph1", avg_time_ph1,'\n', 
+           "std_time_ph1", std_time_ph1, '\n',
+            "cnt_ph1",cnt_ph1 , '\n',
+           "none_cnt_ph1", none_cnt_ph1)
+
+
+    
     return
 
 
 global n_test_paths
+global run_number
+global sample_size
 
+
+n_test_paths = 50
+sample_size = 50
+
+run_number = 4
 setup_grid_params = setup_grid(num_actions=16)
-opfname = 'phase_2_trajs_' + '1'
+opfname = 'phase_2_test_' + str(run_number)
 # rel_path = 'Experiments/55/QL/num_passes_50/QL_Iter_x1/dt_size_2000/ALPHA_0.05/eps_0_0.1'
 rel_path = 'Experiments/88/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
-
 exp_num_case_dir = join(ROOT_DIR, rel_path)
-n_test_paths = 30
 
 run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfname)
 
 
-test_id_list = read_pickled_File(join(exp_num_case_dir, 'test_id_list'))
-tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
-with open(tlist_file, 'r') as f:
-    mylist = ast.literal_eval(f.read())
-n = n_test_paths
-summ = 0
-cnt = 0
-print(len(tlist))
-print(test_id_list[:n])
-for i in range(n):
-    rzn = test_id_list[i]
-    t =  tlist[rzn]
-    print(t)
-    if t != None:
-        summ += tlist[rzn]
-        cnt += 1
+# test_id_list = read_pickled_File(join(exp_num_case_dir, 'test_id_list'))
+# tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
+# with open(tlist_file, 'r') as f:
+#     mylist = ast.literal_eval(f.read())
+# n = n_test_paths
+# summ = 0
+# cnt = 0
+# print(len(tlist))
+# print(test_id_list[:n])
+# for i in range(n):
+#     rzn = test_id_list[i]
+#     t =  tlist[rzn]
+#     print(t)
+#     if t != None:
+#         summ += tlist[rzn]
+#         cnt += 1
 
-print("mean= ", summ/cnt)
-print("cnt = ", cnt)
-print("pfail or badcount% = ", cnt/n)
+# print("mean= ", summ/cnt)
+# print("cnt = ", cnt)
+# print("pfail or badcount% = ", cnt/n)
 

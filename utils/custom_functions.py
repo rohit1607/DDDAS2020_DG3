@@ -536,6 +536,10 @@ def calc_mean_and_std(scalar_list):
     sum_x_sq = 0
     num_rzns = len(scalar_list)
 
+    mean = 'a'
+    std = 'a'
+    none_cnt= 'a'
+
     for i in range(num_rzns):
         if scalar_list[i] != None:
             cnt += 1
@@ -545,10 +549,13 @@ def calc_mean_and_std(scalar_list):
     if cnt == 0:
         print("\n $$$$------ ERROR: List contains only Nones --------$$$$ \n")
 
-    mean = sum_x/cnt
-    var = (sum_x_sq/cnt) - (sum_x/cnt)**2
-    std = var**0.5
-    none_cnt = num_rzns - cnt
+    try:
+        mean = sum_x/cnt
+        var = (sum_x_sq/cnt) - (sum_x/cnt)**2
+        std = var**0.5
+        none_cnt = num_rzns - cnt
+    except:
+        print("cnt = 0")
 
     return mean, std, cnt, none_cnt
 
@@ -643,6 +650,7 @@ def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
     returns set of ids for training trajs and testing trajs by sm=ampling realisations from goodlist
     input: traindata size, num of rzns (scalars)
     """
+    random.seed(1)
     goodlist = get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns)
     id_list = random.sample(goodlist, target_num_rzns)
     train_id_list = id_list[0:dt_size]

@@ -2,6 +2,7 @@ import itertools
 from utils.custom_functions import calculate_reward_const_dt, get_minus_dt
 import numpy as np
 import math
+from definition import Sampling_interval
 
 Pi = math.pi
 
@@ -40,6 +41,46 @@ class Grid:
         # self.r_otherwise = get_minus_dt
 
         self.reward_structure = ['oubound_penalty = '+ str(self.r_outbound), 'Terminal_Reward =' + str(self.r_terminal), 'General_reward: ' + self.r_otherwise.__name__]
+        self.bcrumb_states = set()
+
+
+    def compute_cell(self, s):
+        # s is (x, y)
+        remx = (s[0] - self.xs[0]) % self.dj
+        remy = -(s[1] - self.ys[-1]) % self.di
+        xind = (s[0] - self.xs[0]) // self.dj
+        yind = -(s[1] - self.ys[-1]) // self.di
+
+        if remx >= 0.5 * self.dj and remy >= 0.5 * self.di:
+            xind+=1
+            yind+=1
+        elif remx >= 0.5 * self.dj and remy < 0.5 * self.di:
+            xind+=1
+        elif remx < 0.5 * self.dj and remy >= 0.5 * self.di:
+            yind+=1
+
+        return int(yind), int(xind)
+
+
+    def make_bcrumb_set(self, paths, train_id_list):
+
+        for k in train_id_list:
+            exp_buffer_kth_traj = []
+            trajectory = paths[k, 0] #kth trajectory, array of shape (n,2)
+
+            # append starting point to traj
+            s_t = int(0)
+            state_traj = []
+            for i in range(0, len(trajectory), Sampling_interval):
+                s_i, s_j = self.compute_cell( trajectory[i])         # compute indices corrsponding to first coord
+                self.bcrumb_states.add((s_t, s_i, s_j))
+                s_t += 1
+
+            # add last point to the trajectories
+            s_i, s_j = self.compute_cell( trajectory[-1])
+            self.bcrumb_states.add((s_t, s_i, s_j))
+
+
 
     # Rewards and Actions to be dictionaries
     def set_AR(self, Actions):
@@ -140,6 +181,9 @@ class Grid:
                     r += self.r_outbound
 
             s_new = self.current_state()
+            # if s_new in self.bcrumb_states:
+            #     r += r.terminal/100
+
             r += self.r_otherwise(self.dt, self.xs, self.ys, s0, s_new, vnetx, vnety, action)
             # r += self.r_otherwise(self.dt) # get_minus_dt()
 

@@ -2,7 +2,7 @@ from utils.setup_grid import setup_grid
 from DP.DP import run_DP
 from os import getcwd, makedirs
 from os.path import join, exists
-from utils.custom_functions import createFolder, append_summary_to_summaryFile
+from utils.custom_functions import createFolder, append_summary_to_summaryFile, get_rzn_ids_for_training_and_testing
 from QL.TQLearn_RUNNER import run_QL
 from definition import ROOT_DIR
 import argparse
@@ -126,11 +126,26 @@ args = parser.parse_args()
 setup_grid_params = setup_grid(num_actions=16)
 model_file = 'GPU_test_17_3D_60nT_a16'
 
-
-
+g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid_params
 # Paramerers for QL
 #Traing data size
 dt_size = args.dt_size
+
+
+train_id_list, test_id_list,  _, _, goodlist = get_rzn_ids_for_training_and_testing(dt_size, useful_num_rzns, paths)
+g.make_bcrumb_set(paths, train_id_list)
+# print("g.bcrumb_states size= ",len(g.bcrumb_states))
+# print(g.bcrumb_states)
+
+# if g.start_state in g.bcrumb_states:
+#     print(" g.start_state in g.bcrumb_states")
+# end_i, end_j = g.endpos
+# for t in range(50,60):
+#     if (t,end_i, end_j) in g.bcrumb_states:
+#         print((t,end_i, end_j),"in g.bcrumb_states")
+
+# Paramerers for QL
+#Traing data size
 Training_traj_size_list = [dt_size]
 
 # ALPHA_list = [0.05, 0.5, 1]
@@ -179,9 +194,15 @@ for (npl_list, eps_dec_method, N_inc) in cart_prod:
 
 print(QL_params_list_mp)
 
+print("Launching experiment")
+
+
+# ---------------------------- QL LAUNCH ----------------------------------------------
 # WORKS but all 4 processes not running.may be folder creation issue. not sure.
 # with Pool(len(QL_params_list_mp)) as p:
 #     output_params_list = p.starmap(run_Experiment, QL_params_list_mp)
+
+
 
 p = ['dummy']*len(cart_prod)
 for i in range(len(cart_prod)):
@@ -196,8 +217,10 @@ for i in range(len(cart_prod)):
     p[i].join()  
 
 
+# ---------------------------- QL LAUNCH ----------------------------------------------
 
-print("Launching experiment")
+
+
 
 
 # run_Experiment(QL = QL_params)
