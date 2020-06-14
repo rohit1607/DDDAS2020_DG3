@@ -2,8 +2,9 @@ import time
 import numpy as np
 from utils.custom_functions import picklePolicy, calc_mean_and_std, read_pickled_File
 import pickle
-from utils.plot_functions import plot_exact_trajectory, plot_exact_trajectory_set, plot_learned_policy
+from utils.plot_functions import plot_exact_trajectory_set, plot_learned_policy
 from definition import ROOT_DIR
+import math
 
 # action_state_space = []
 """
@@ -51,24 +52,41 @@ def value_iteration_update(g, V, Trans_prob):
             delV = np.abs(V[s]-old_V)
 
         # delV = max(delV, np.abs(V[s] - old_V))
-
     return V, delV, state_flag
+
 
 def compute_Policy(g, policy, Trans_prob, V):
     for s in action_state_space:
         g.set_state(s)
         best_val = -float('inf')
         new_a = None
+        if s == (0,7,5):
+            print("**** check at st ", s, ': ')
         for a in g.actions:
             val = 0
+            if s == (0,7,5):
+                print("\n**check at ac ", a)
+                print("*snew*")
             for s_new in Trans_prob[s][a]:
-                prob, r = Trans_prob[s][a][s_new]
-                val += prob * (r + V[s_new])
+                try:
+                    prob, r = Trans_prob[s][a][s_new]
+                    val += prob * (r + V[s_new])
+                    if s == (0,7,5):
+                        print(s_new)
+                        if math.isnan(prob) or math.isnan(r):
+                            print("nan", prob, r)
+                except:
+                    print("Exception in compute_policy()")
+                    print(s, np.round(a[1], 3), s_new)
                 # prob, _ = Trans_prob[s][a][s_new]
                 # val += prob * (g.R(s, s_new) + V[s_new])
+
             if val > best_val:
                 best_val = val
                 new_a = a
+            if s == (0,7,5):
+                print("val data for ac: ", val, best_val, new_a)
+        
         policy[s] = new_a
 
     return policy
@@ -105,23 +123,47 @@ def run_DP(setup_grid_params, prob_file, output_file, output_path, threshold = 1
     policy, V = initialise_policy_and_V(g)
     countb = 0
 
+    print("Parameters:\n",
+            "xs: ", xs, '\n',
+            "ys: ", ys, '\n',
+            "nmodes: ", nmodes, '\n',
+            "num_rzns: ", num_rzns, '\n'
+        )
+    for i in range(len(params)):
+        print(param_str[i], ": ", params[i])
+
+
     start = time.time()
     #Iterate VI updates
     while True:
         countb += 1
-        print("iter: ", countb)
+        # print("iter: ", countb)
+        loop_time = time.time()
 
         V, del_V_max, flagged_state = value_iteration_update(g, V, Trans_prob)
 
-        if countb % 100 == 0:
-            print("iter: ", countb, del_V_max, flagged_state)
+        if countb % 1 == 0:
+            print("--- iter: ", countb, '\n',
+                  "del_V_max: ",del_V_max,'\n',
+                  "flagged_state: ", flagged_state,'\n',
+                  "cumul_time: ", (time.time()-start)/60, ' mins\n',
+                  "iter_time: ",  (time.time()-loop_time)/60, ' mins'
+                )
 
         if del_V_max< threshold:
             print("Converged after ", countb, " iterations")
             break
 
+        if countb % 50 == 0:
+            print("compute policy learned upitil iter ", countb )
+            policy = compute_Policy(g, policy, Trans_prob, V)
+            print("pickle policy")
+            picklePolicy(policy, output_path + '/partial_policy_till_iter' + str(countb))
+
+        print()
+
     # Compute policy
-    print("launch compute policy")
+    print("launch compute policy after convergence")
     policy = compute_Policy(g, policy, Trans_prob, V)
     end = time.time()
     DP_compute_time = end - start
@@ -139,7 +181,7 @@ def run_DP(setup_grid_params, prob_file, output_file, output_path, threshold = 1
 
     # Plot Policy
     print("plot policy")
-    plot_learned_policy(g, DP_params = [policy, output_path])
+    plot_learned_policy(g, DP_params = [policy, output_path], vel_field_data=vel_field_data)
 
     print("write list to file")
     write_list_to_file(t_list_all, output_path+'/t_list_all')

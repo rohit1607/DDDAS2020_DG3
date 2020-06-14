@@ -1,5 +1,5 @@
 import itertools
-from utils.custom_functions import calculate_reward_const_dt
+from utils.custom_functions import calculate_reward_const_dt, get_minus_dt
 import numpy as np
 import math
 
@@ -33,9 +33,12 @@ class Grid:
         self.start_state = (0, start[0], start[1])
         # self.edge_states = self.edge_states()
 
-        self.r_outbound = -100
-        self.r_terminal = 100
+        self.r_outbound = -1
+        self.r_terminal = 1
+        # TODO: CHANGE ACCORDINGLY. TESTING -1 REWARD> Also change in move()
         self.r_otherwise = calculate_reward_const_dt
+        # self.r_otherwise = get_minus_dt
+
         self.reward_structure = ['oubound_penalty = '+ str(self.r_outbound), 'Terminal_Reward =' + str(self.r_terminal), 'General_reward: ' + self.r_otherwise.__name__]
 
     # Rewards and Actions to be dictionaries
@@ -66,9 +69,21 @@ class Grid:
 
 
     # MAY NEED TO CHANGE DEFINITION
-    def is_terminal(self):
+    def is_terminal(self, query_s = None, almost = None):
         # return self.actions[state]==None
-        return (self.current_pos() == self.endpos)
+        if query_s == None:
+            if almost == True:
+                end_i, end_j = self.endpos
+                accepted_i = [end_i, end_i-1, end_i+1]
+                accepted_j = [end_j, end_j-1, end_j+1]
+                i, j = self.current_pos()
+                if i in accepted_i and j in accepted_j:
+                    return True                
+            else:
+                return (self.current_pos() == self.endpos)
+        else:
+            t, i, j = query_s
+            return((i,j) == self.endpos)
 
     def move_exact(self, action, Vx, Vy):
         r = 0
@@ -126,9 +141,14 @@ class Grid:
 
             s_new = self.current_state()
             r += self.r_otherwise(self.dt, self.xs, self.ys, s0, s_new, vnetx, vnety, action)
+            # r += self.r_otherwise(self.dt) # get_minus_dt()
+
 
             if self.is_terminal():
                 r += self.r_terminal
+            elif not self.if_within_actionable_time(): #not terminal anb not within actionable time
+                r += self.r_outbound
+
             
             # increment time index by 1
             self.t += 1 
@@ -176,12 +196,16 @@ class Grid:
         return (self.t >= 0 and self.t < self.nt)
 
 
-    def if_within_actionable_time(self):
-        return (self.t >= 0 and self.t < self.nt - self.dt)
+    def if_within_actionable_time(self, query_s=None):
+        if query_s != None:
+            t, i, j = query_s
+            return (t >= 0 and t < self.nt - 1)
+        else:
+            return (self.t >= 0 and self.t < self.nt - 1)
 
 
     def if_within_TD_actionable_time(self):
-        return (self.t >= 0 and self.t < self.nt - 2*self.dt)
+        return (self.t >= 0 and self.t < self.nt - 2*1)
 
 
     def if_within_grid(self,s):
@@ -191,15 +215,21 @@ class Grid:
         j = s[2]
         return (j <= (self.nj) - 1 and j >= 0 and i <= (self.ni) - 1 and i >= 0 and t <= (self.nt) - 1 and t >= 0)
 
-    def if_edge_state(self, pos):
+    def if_edge_state(self, pos_or_state):
         """
         returns True if state is at the edge
         :param pos:
         :return:
         """
-
-        i = pos[0]
-        j = pos[1]
+        if len(pos_or_state)==2:
+            i = pos_or_state[0]
+            j = pos_or_state[1]
+        elif len(pos_or_state)==3:
+            t = pos_or_state[0]
+            i = pos_or_state[1]
+            j = pos_or_state[2]
+        else:
+            assert ( len(pos_or_state)==2 or len(pos_or_state)==3 ), "Wrong input to if_edge_state()"
         if (i == 0) or (i == self.ni - 1) or (j == 0) or (j == self.nj - 1):
             return True
         else:

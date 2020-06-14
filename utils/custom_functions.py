@@ -43,7 +43,7 @@ def get_angle_in_0_2pi(angle):
 
 def calculate_reward_const_dt(dt, xs, ys, so, sn, vnet_x, vnet_y, a, degree = False):
 
-    if (so == sn):
+    if (so[1] == sn[1] and so[2] == sn[2]):
         dt_new = dt
     else:
         ni = len(ys)
@@ -75,8 +75,12 @@ def calculate_reward_const_dt(dt, xs, ys, so, sn, vnet_x, vnet_y, a, degree = Fa
     return -dt_new
 
 
+def get_minus_dt(dt):
+    return -dt
+
 def calculate_reward_var_dt(dt, xs, ys, so, sn, xp, yp, Vx, Vy):
-    if (Vx == 0 and Vy == 0) or (so == sn):
+    # if (Vx == 0 and Vy == 0) or (so == sn):
+    if (so[1] == sn[1] and so[2] == sn[2]):
         dt_new = dt
     else:
         ni = len(ys)
@@ -354,7 +358,6 @@ def calc_net_velocity(vx, vy, a):
 
 
 def action_angle(traj_theta, actions, vx, vy, F):
-    print()
     diff_list = []
     blocked_actions = []
     angle_list = []
@@ -377,8 +380,23 @@ def action_angle(traj_theta, actions, vx, vy, F):
     action = actions[min_id]
     return action
 
-def Calculate_action(state_1,p1,p2, vx, vy, g):
-    traj_theta = get_angle_in_0_2pi(math.atan2(p2[1] - p1[1], p2[0] - p1[0]))
+# def Calculate_action(state_1,p1,p2, vx, vy, g):
+#     traj_theta = get_angle_in_0_2pi(math.atan2(p2[1] - p1[1], p2[0] - p1[0]))
+#     F = g.actions[0][0]
+#     action = action_angle(traj_theta, g.actions, vx, vy, F)
+#     return action
+def Calculate_action(state_1, state_2, p1, p2, vx, vy, g, coord_traj_theta = False):
+    #coord_traj_theta
+    if coord_traj_theta == True:
+        traj_theta = get_angle_in_0_2pi(math.atan2(p2[2] - p1[2], p2[1] - p1[1]))
+    # state_traj_theta
+    else:
+        t1, i1, j1 = state_1
+        t2, i2, j2 = state_2
+
+        p_s1 = (t1, g.xs[j1], g.ys[g.ni - 1 - i1])
+        p_s2 = (t2, g.xs[j2], g.ys[g.ni - 1 - i2])
+        traj_theta = get_angle_in_0_2pi(math.atan2(p2[2] - p1[2], p2[1] - p1[1]))
     F = g.actions[0][0]
     action = action_angle(traj_theta, g.actions, vx, vy, F)
     return action
@@ -389,18 +407,22 @@ def initialise_guided_Q_N(g, init_Qval, guiding_Qval,  init_Nval):
     N = {}
     end_i, end_j = g.endpos
     # p2 = (None, g.xs[end_j], g.ys[g.ni - 1 - end_i])
-    p2 = (g.xs[end_j], g.ys[g.ni - 1 - end_i])
+    #take p2 to be the end point, in order to get action that leads to the end point
+    p2 = (None, g.xs[end_j], g.ys[g.ni - 1 - end_i])
+    #Here vx and vys are initialised to zero. this will just make 
+    # the action heading (not net movement direction) towards endpoint
     Vx = Vy = np.zeros((len(g.xs), len(g.ys)))
 
-
+    s_dummy = None
     for s in g.ac_state_space():
         Q[s] = {}
         N[s] = {}
         g.set_state(s)
-        # p1 = (None, g.x, g.y)
-        p1 = (g.x, g.y)
-        m, n= s
-        targeting_action = Calculate_action(s, p1, p2, Vx[m,n], Vy[m,n],  g)
+        p1 = (None, g.x, g.y)
+        # p1 = (g.x, g.y)
+        t, m, n= s
+        # targeting_action = Calculate_action(s, p1, p2, Vx[m,n], Vy[m,n],  g)
+        targeting_action = Calculate_action(s, s_dummy, p1, p2, Vx[m,n], Vy[m,n],  g, coord_traj_theta = True)
 
         for a in g.actions:
 
@@ -474,7 +496,7 @@ def interpolate_to_XP_grid(XU, YU, U, XP, YP):
 
 
 def append_summary_to_summaryFile(summary_file, summary_data):
-    myFile = open('Experiments/Exp_summary.csv', 'a')
+    myFile = open(summary_file, 'a')
     with myFile:
        writer = csv.writer(myFile)
        writer.writerows([summary_data])
@@ -529,6 +551,117 @@ def calc_mean_and_std(scalar_list):
     none_cnt = num_rzns - cnt
 
     return mean, std, cnt, none_cnt
+
+
+def calc_mean_and_std_train_test(scalar_list,train_id_list, test_id_list):
+    """
+    calulates mean, variance and None count of entries in given list.
+    :param scalar_list: ORDERED list of scalar and None elements. 
+            *_id_list: set containing test and train rzn ids
+    :return: mean, std dev, good_cnt, Nonecount
+    """
+
+    cnt = [0, 0]
+    sum_x = [0, 0]
+    sum_x_sq = [0, 0]
+    case_len =[len(train_id_list), len(test_id_list)]
+    num_rzns = len(scalar_list)
+
+    mean = ['a','a']
+    var =['a', 'a']
+    std = ['s','s']
+    none_cnt = ['s', 's']
+    none_cnt_perc = ['s', 's']
+
+    for i in range(num_rzns): # this works because scalar_list is ordered from 0-5000
+        if i in train_id_list:
+            case = 0    # case 0 corresponds to train
+        else:
+            case = 1    # case 1 corresponds to test
+        
+        if scalar_list[i] != None:
+            cnt[case] += 1
+            sum_x[case] += scalar_list[i]
+            sum_x_sq[case] += scalar_list[i]**2
+
+    # if there are non0 test rzns but all lead to none, cnt[1]==0.
+    if cnt[1] == 0 and case_len[1] != 0:
+        print("\n $$$$------: List contains only Nones --------$$$$ \n")
+
+
+    for case in range(2):
+        try:
+            if case_len[case]!=0:
+                mean[case] = sum_x[case]/cnt[case]
+                var[case] = (sum_x_sq[case]/cnt[case]) - (sum_x[case]/cnt[case])**2
+                std[case] = var[case]**0.5
+                none_cnt[case] = case_len[case] - cnt[case]
+                none_cnt_perc[case] = none_cnt[case]/case_len[case]*100
+        except:
+            print("\n $$$$------ Raising excption: List contains only Nones --------$$$$ \n")
+
+
+
+    return mean, std, cnt, none_cnt, none_cnt_perc
+
+
+def get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns):
+    """returns those rzn ids among 5k that DO NOT have pde paths longer than admisible by 
+        mdp formulation. We trajectories end at t=59.
+        We currently remove top those rzns which may lead to t = 60 and then some random extra to get a round no.
+        The same rzns will have to be used in DP   
+    """
+    #get list of lengths for all 5k paths
+    lenlist = []
+    for k in range(5000):
+        lenlist.append(len(paths[k,0]))
+    len_array = np.array(lenlist)
+
+    # only keep those rzns which have apt pde traj lenght
+    count = 0
+    goodlist = [] 
+    for i in range(len(len_array)):
+        length = len_array[i]
+        if length <= 2360:
+            #expected count = 3550
+            count += 1
+            goodlist.append(i)
+
+
+    # remove extra rzns to round off to target_num_rzns
+    len_goodlist = len(goodlist)
+    diff = len_goodlist - target_num_rzns
+    for i in range(diff):
+        goodlist.pop()
+
+    return goodlist
+
+
+def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
+    """
+    target_num_rzns is the same as useful_num_rzns and is set up in setup_grid()
+    returns set of ids for training trajs and testing trajs by sm=ampling realisations from goodlist
+    input: traindata size, num of rzns (scalars)
+    """
+    goodlist = get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns)
+    id_list = random.sample(goodlist, target_num_rzns)
+    train_id_list = id_list[0:dt_size]
+    test_id_list = id_list[dt_size:target_num_rzns]
+    train_id_list.sort()
+    test_id_list.sort()
+    return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
+
+
+def print_sorted_Qs_kvs(g, Q, state):
+    x = Q[state] #x is a dictionary of k: actions, v: action-values
+    sorted_x = {k: v for k, v in sorted(x.items(), key=lambda item: item[1])}
+    # print(sorted_x)
+    print("Q[",state,"]:")
+    for k in sorted_x:
+        print(k, sorted_x[k])
+
+    return sorted_x
+
 
 def extract_velocity(vel_field_data, t, i, j, rzn):
     # all_u_mat, all_v_mat, all_ui_mat, all_vi_mat, all_Yi = vel_field_data
