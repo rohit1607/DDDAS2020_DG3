@@ -181,8 +181,8 @@ class Grid:
                     r += self.r_outbound
 
             s_new = self.current_state()
-            # if s_new in self.bcrumb_states:
-            #     r += r.terminal/100
+            if s_new in self.bcrumb_states:
+                r += self.r_terminal/100
 
             r += self.r_otherwise(self.dt, self.xs, self.ys, s0, s_new, vnetx, vnety, action)
             # r += self.r_otherwise(self.dt) # get_minus_dt()

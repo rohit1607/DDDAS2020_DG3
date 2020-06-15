@@ -9,6 +9,7 @@ import numpy as np
 import ast
 import random
 from explict_plot import plot_and_return_exact_trajectory_set_train_data
+import argparse
 
 # def sas_match(query_s1_a_s2, s1_a_r_s2):
 #     """
@@ -200,7 +201,7 @@ def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname)
     traj_list = []
     bad_count = 0
     # for k in range(len(test_id_list)):
-    for k in range(n_test_paths):
+    for k in range(n_test_paths_range[0], n_test_paths_range[1]):
         Qcopy = copy.deepcopy(Q)
         Ncopy = copy.deepcopy(N)
         rzn = test_id_list[k]
@@ -301,7 +302,7 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     # print('len(sars_traj_list) = ', len(sars_traj_list))
     print("len(train_id_list)= ", len(train_id_list))
     print("len(test_id_list)= ", len(test_id_list))
-    print('n_test_paths = ', n_test_paths)
+    print('n_test_paths_range = ', n_test_paths_range)
     t_list, bad_count = run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N,
                                               exp_num_case_dir, opfname )
 
@@ -310,7 +311,7 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     writePolicytoFile(phase2_results,join(exp_num_case_dir, opfname))
     avg_time_ph2, std_time_ph2, cnt_ph2 , none_cnt_ph2 = phase2_results
 
-    print("test_id_list[0:n_test_paths] = ", test_id_list[0:n_test_paths])
+    print("test_id_list[range] = ", test_id_list[n_test_paths_range[0]:n_test_paths_range[1]])
     print("----- phase 2 data ---------")
     print("avg_time_ph2", avg_time_ph2,'\n', 
            "std_time_ph2", std_time_ph2, '\n',
@@ -321,7 +322,7 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     # Compare
     g, xs, ys, X, Y, vel_field_data, nmodes, _, _, _, _ = setup_grid_params
     p1_t_list, p1_G_list, p1_bad_count = plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, 
-                                            vel_field_data, nmodes, test_id_list,n_test_paths, 
+                                            vel_field_data, nmodes, test_id_list,n_test_paths_range, 
                                             exp_num_case_dir, fname='Explicit_Phase_1_test_' + str(run_number))
     phase1_results = calc_mean_and_std(p1_t_list)
     avg_time_ph1, std_time_ph1, cnt_ph1 , none_cnt_ph1 = phase1_results
@@ -336,19 +337,35 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     return
 
 
-global n_test_paths
+
+
+parser = argparse.ArgumentParser(description='Take parameters as input args.')
+
+parser.add_argument('n_start', type=int, help='start of n_test_paths_range')
+parser.add_argument('n_end', type=int, help='start of n_test_paths_range')
+
+args = parser.parse_args()
+
+
+global n_test_paths_range
 global run_number
 global sample_size
 
+n_start = args.n_start
+n_end = args.n_end
+# n_test_paths_range = [250, 500]
+n_test_paths_range = [n_start, n_end]
 
-n_test_paths = 50
 sample_size = 50
 
-run_number = 4
+run_number = 10000 + n_start
 setup_grid_params = setup_grid(num_actions=16)
 opfname = 'phase_2_test_' + str(run_number)
 # rel_path = 'Experiments/55/QL/num_passes_50/QL_Iter_x1/dt_size_2000/ALPHA_0.05/eps_0_0.1'
-rel_path = 'Experiments/88/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+# rel_path = 'Experiments/104/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+# rel_path = 'Experiments/95/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+# rel_path = 'Experiments/111/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+rel_path = 'Experiments/118/QL/num_passes_50/QL_Iter_x1/dt_size_4000/ALPHA_0.05/eps_0_0.1'
 exp_num_case_dir = join(ROOT_DIR, rel_path)
 
 run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfname)

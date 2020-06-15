@@ -2,7 +2,7 @@ import time
 import numpy as np
 from utils.custom_functions import picklePolicy, calc_mean_and_std, read_pickled_File
 import pickle
-from utils.plot_functions import plot_exact_trajectory_set, plot_learned_policy
+from utils.plot_functions import plot_exact_trajectory_set, plot_learned_policy, plot_exact_trajectory_set_DP
 from definition import ROOT_DIR
 import math
 
@@ -154,11 +154,11 @@ def run_DP(setup_grid_params, prob_file, output_file, output_path, threshold = 1
             print("Converged after ", countb, " iterations")
             break
 
-        if countb % 50 == 0:
-            print("compute policy learned upitil iter ", countb )
-            policy = compute_Policy(g, policy, Trans_prob, V)
-            print("pickle policy")
-            picklePolicy(policy, output_path + '/partial_policy_till_iter' + str(countb))
+        # if countb % 50 == 0:
+        #     print("compute policy learned upitil iter ", countb )
+        #     policy = compute_Policy(g, policy, Trans_prob, V)
+        #     print("pickle policy")
+        #     picklePolicy(policy, output_path + '/partial_policy_till_iter' + str(countb))
 
         print()
 
@@ -176,8 +176,11 @@ def run_DP(setup_grid_params, prob_file, output_file, output_path, threshold = 1
     # trajectory, G = plot_exact_trajectory(g, policy, X, Y, Vx_rzns[eg_rzn,:,:], Vy_rzns[eg_rzn,:,:], output_path, fname='Sample_Traj_with_policy_in rzn_'+ str(eg_rzn), lastfig = True)
    
     print("plot exct trajectory set")
-    t_list_all, t_list_reached, G_list, bad_count_tuple= plot_exact_trajectory_set(g, policy, X, Y, vel_field_data, output_path, fname='Traj_set' + output_file)
+    test_id_list = [i for i in range(4500,5000)]
+
+    t_list_all, t_list_reached, G_list, bad_count_tuple= plot_exact_trajectory_set_DP(g, policy, X, Y, vel_field_data, test_id_list, output_path, fname='Test_Traj_set' + output_file)
     badcount = bad_count_tuple[0]
+    print("t_list_all ", t_list_all)
 
     # Plot Policy
     print("plot policy")

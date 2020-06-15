@@ -5,7 +5,7 @@ import random
 from _collections import OrderedDict
 
 SAMPLING_Interval = Sampling_interval
-max_delQ_threshold = 0.1
+max_delQ_threshold = 0.001
 
 # Helper func to compute cell state of pt in trajectory and add it to dic
 def compute_cell(grid, s):
@@ -158,7 +158,7 @@ def build_experience_buffer(grid, vel_field_data, nmodes, paths, sampling_interv
 
 def Q_update(Q, N, max_delQ, sars, ALPHA, grid, N_inc):
     s1, a1, r1, s2 = sars
-    if not grid.is_terminal(s1):     # if (s1[1], s1[2]) != grid.endpos:
+    if not grid.is_terminal(s1) and grid.if_within_actionable_time(s1):     # if (s1[1], s1[2]) != grid.endpos:
         N[s1][a1] += N_inc
         alpha1 = ALPHA / N[s1][a1]
         q_s1_a1 = r1

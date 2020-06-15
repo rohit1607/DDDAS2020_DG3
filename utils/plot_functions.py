@@ -284,6 +284,117 @@ def plot_exact_trajectory_set(g, policy, X, Y, vel_field_data, nmodes, train_id_
     return t_list, G_list, bad_count
 
 
+
+def plot_exact_trajectory_set_DP(g, policy, X, Y, vel_field_data, test_id_list, fpath,
+                                                fname='Trajectories'):
+
+    # time calculation and state trajectory
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(1, 1, 1)
+    # set grid
+    minor_xticks = np.arange(g.xs[0] - 0.5 * g.dj, g.xs[-1] + 2 * g.dj, g.dj)
+    minor_yticks = np.arange(g.ys[0] - 0.5 * g.di, g.ys[-1] + 2 * g.di, g.di)
+
+    major_xticks = np.arange(g.xs[0], g.xs[-1] + 2 * g.dj, 5 * g.dj)
+    major_yticks = np.arange(g.ys[0], g.ys[-1] + 2 * g.di, 5 * g.di)
+
+    ax.set_xticks(minor_xticks, minor=True)
+    ax.set_yticks(minor_yticks, minor=True)
+    ax.set_xticks(major_xticks)
+    ax.set_yticks(major_yticks)
+
+    ax.grid(which='major', color='#CCCCCC', linestyle='')
+    ax.grid(which='minor', color='#CCCCCC', linestyle='--')
+    st_point= g.start_state
+    plt.scatter(g.xs[st_point[2]], g.ys[g.ni - 1 - st_point[1]], c='g')
+    plt.scatter(g.xs[g.endpos[1]], g.ys[g.ni - 1 - g.endpos[0]], c='r')
+    plt.grid()
+    plt.gca().set_aspect('equal', adjustable='box')
+
+    # plt.quiver(X, Y, vel_field_data[0][0,:,:], vel_field_data[1][0, :, :])
+
+    # nt, nrzns, nmodes = vel_field_data[4].shape #vel_field_data[4] is all_Yi
+
+    bad_count =0
+    t_list_all=[]
+    t_list_reached=[]
+    G_list=[]
+    traj_list = []
+
+    for rzn in test_id_list:
+        g.set_state(g.start_state)
+        dont_plot =False
+        bad_flag = False
+        # t = 0
+        G = 0
+
+        xtr = []
+        ytr = []
+
+        t, i, j = g.start_state
+
+        a = policy[g.current_state()]
+        xtr.append(g.x)
+        ytr.append(g.y)
+
+        # while (not g.is_terminal()) and g.if_within_actionable_time():
+        while True:
+            vx, vy = extract_velocity(vel_field_data, t, i, j, rzn)
+            r = g.move_exact(a, vx, vy)
+            G = G + r
+            # t += 1
+            (t, i, j) = g.current_state()
+
+            xtr.append(g.x)
+            ytr.append(g.y)
+
+            # if edge state encountered, then increment badcount and Dont plot
+            if g.if_edge_state((i,j)):
+                bad_count += 1
+                # dont_plot=True
+                break
+
+            if (not g.is_terminal(almost = True)) and  g.if_within_actionable_time():
+                a = policy[g.current_state()]
+            elif g.is_terminal(almost = True):
+                break
+            else:
+            #  i.e. not terminal and not in actinable time.
+            # already checked if ternminal or not. If not terminal 
+            # if time reaches nt ie not within actionable time, then increment badcount and Dont plot
+                bad_count+=1
+                bad_flag=True
+                # dont_plot=True
+                break
+
+
+        if dont_plot==False:
+            plt.plot(xtr, ytr)
+           
+        if bad_flag==False:
+            traj_list.append((xtr, ytr))
+            t_list_all.append(t)
+            G_list.append(G)
+            t_list_reached.append(t)
+
+        
+        #ADDED for trajactory comparison
+        else:
+            traj_list.append(None)
+            t_list_all.append(None)
+            G_list.append(None)
+
+    if fname != None:
+        plt.savefig(join(fpath, fname), dpi=300)
+        print("*** pickling traj_list ***")
+        picklePolicy(traj_list, join(fpath,fname))
+        print("*** pickled ***")
+
+    bad_count_tuple = (bad_count, str(bad_count * 100 / len(test_id_list)) + '%')
+    return t_list_all, t_list_reached, G_list, bad_count_tuple
+
+
+
 def plot_learned_policy(g, DP_params = None, QL_params = None, vel_field_data = None, showfig = False):
     """
     Plots learned policy

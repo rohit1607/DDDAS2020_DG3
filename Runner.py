@@ -100,13 +100,6 @@ def run_Experiment(DP = None, QL = None):
         print("In Runner: Executing QL Finished !!")
 
 
-# Training_traj_size_list, ALPHA_list, esp0_list, QL_Iters, init_Q, with_guidance = QL_params
-
-
-
-setup_grid_params = setup_grid(num_actions=16)
-model_file = 'GPU_test_17_3D_60nT_a16'
-
 
 
 
@@ -124,16 +117,17 @@ args = parser.parse_args()
 
 # Training_traj_size_list, ALPHA_list, esp0_list, QL_Iters, init_Q, with_guidance = QL_params
 setup_grid_params = setup_grid(num_actions=16)
-model_file = 'GPU_test_17_3D_60nT_a16'
+model_file = 'DG_model_2500_train_id_list_1_3D_60nT_a16'
+
 
 g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid_params
 # Paramerers for QL
 #Traing data size
 dt_size = args.dt_size
 
-
 train_id_list, test_id_list,  _, _, goodlist = get_rzn_ids_for_training_and_testing(dt_size, useful_num_rzns, paths)
 g.make_bcrumb_set(paths, train_id_list)
+print("$$$$ check: train_id_list", train_id_list[0:20])
 # print("g.bcrumb_states size= ",len(g.bcrumb_states))
 # print(g.bcrumb_states)
 
@@ -143,6 +137,9 @@ g.make_bcrumb_set(paths, train_id_list)
 # for t in range(50,60):
 #     if (t,end_i, end_j) in g.bcrumb_states:
 #         print((t,end_i, end_j),"in g.bcrumb_states")
+
+# g.set_state((30, 51, 46))
+# print(g.move_exact((20,0),0,0))
 
 # Paramerers for QL
 #Traing data size
@@ -173,7 +170,7 @@ method = 'reverse_order'
 # eps_dec_method = args.eps_dec_method
 eps_dec_method_list = [1]
 
-# N_inc_list = [0.005, 0.05]
+# N_inc_list = [0.05]
 N_inc_list = [0.01, 0.05, 0.005]
 # N_inc = args.N_inc
 
@@ -210,7 +207,7 @@ for i in range(len(cart_prod)):
 
 for i in range(len(cart_prod)):
     p[i].start()
-    for j in range(1000000):  #spend time between starts
+    for j in range(4000000):  #spend time between starts
         k=j
 
 for i in range(len(cart_prod)):

@@ -629,8 +629,9 @@ def get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns):
     goodlist = [] 
     for i in range(len(len_array)):
         length = len_array[i]
-        if length <= 2360:
-            #expected count = 3550
+        if length <= 2380:
+            #expected count = 3550 with 2360
+            #expected count = 4028 with 2380
             count += 1
             goodlist.append(i)
 
@@ -644,20 +645,36 @@ def get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns):
     return goodlist
 
 
+# def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
+#     """
+#     target_num_rzns is the same as useful_num_rzns and is set up in setup_grid()
+#     returns set of ids for training trajs and testing trajs by sm=ampling realisations from goodlist
+#     input: traindata size, num of rzns (scalars)
+#     """
+#     random.seed(1)
+#     goodlist = get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns)
+#     id_list = random.sample(goodlist, target_num_rzns)
+#     train_id_list = id_list[0:dt_size]
+#     test_id_list = id_list[dt_size:target_num_rzns]
+#     train_id_list.sort()
+#     test_id_list.sort()
+#     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
+
+
 def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
-    """
-    target_num_rzns is the same as useful_num_rzns and is set up in setup_grid()
-    returns set of ids for training trajs and testing trajs by sm=ampling realisations from goodlist
-    input: traindata size, num of rzns (scalars)
-    """
-    random.seed(1)
-    goodlist = get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns)
-    id_list = random.sample(goodlist, target_num_rzns)
+    goodlist = [i for i in range(target_num_rzns)]
+    id_list = goodlist
     train_id_list = id_list[0:dt_size]
     test_id_list = id_list[dt_size:target_num_rzns]
     train_id_list.sort()
     test_id_list.sort()
     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
+
+# def get_rzn_ids_for_training_and_testing_v2(useful_num_rzns, dt_size):
+#     id_list = [i for i in range(useful_num_rzns)] #[0..4999]
+#     train_id_list = id_list[0:dt_size]
+#     test_id_list = id_list[dt_size:useful_num_rzns]
+#     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
 
 
 def print_sorted_Qs_kvs(g, Q, state):

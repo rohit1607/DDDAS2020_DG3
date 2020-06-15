@@ -72,7 +72,7 @@ def setup_grid(num_actions =16, nt = 60, dt =40e-5, F =20.202, startpos = (79, 1
     # Vy_rzns = np.load(join(ROOT_DIR,'Input_data_files/Vely_5K_rlzns.npy'))
 
     nT, _, nmodes = all_Yi.shape
-    useful_num_rzns = 3000
+    useful_num_rzns = 5000
     if nt == None:
         nt = nT
 

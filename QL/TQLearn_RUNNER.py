@@ -73,6 +73,8 @@ def run_QL(setup_grid_params, QL_params, QL_path, exp_num):
 
                         # get respective indices fo trajectories for training and testing:
                         train_id_list, test_id_list, train_id_set, test_id_set, goodlist = get_rzn_ids_for_training_and_testing(dt_size, useful_num_rzns, paths)
+
+                        print("$$$$ check in TQ : train_id_list", train_id_list[0:20])
                         print("test_size= ", test_size)
                         print("len_goodlist \n", len(goodlist))
 

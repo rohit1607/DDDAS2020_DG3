@@ -1,7 +1,10 @@
-from utils.build_model_GPU import build_sparse_transition_model
+
+# from utils.build_model_GPU import build_sparse_transition_model
 # from utils.build_model import Build_Model
 import time
-
+from definition import ROOT_DIR
+import numpy as np
+from os.path import join
 # print("debugging 89th step crash. test 6: trying 8 actions ")
 # result : crashes in 97th step.
 # print("debugging  contd: test 7: trying reduced xs,ys. gsize is 10 by making Test_grid = True")
@@ -39,10 +42,11 @@ import time
 # print("debugging contd: GPU_test_16: test for nt = 30, nT= 60(at data level) on full space, dt = 40e-5, rew = def")
 #Come back to this later after rechecking tests 13 and 15 with correct xs, ys
 
-print("debugging contd: GPU_test_13b: 12-15 used 120_nT folder and had setupgrid(test=true) call.. test for nt = 30 on full space, dt = 40e-5")
+# print("debugging contd: GPU_test_13b: 12-15 used 120_nT folder and had setupgrid(test=true) call.. test for nt = 30 on full space, dt = 40e-5")
 #reulsts: similar. 
 
-print("debugginh cotd: GPU_test_17: using nT_60 folder. removed wanton setupgrid(), ")
+# print("debugginh cotd: GPU_test_17: using nT_60 folder. removed wanton setupgrid(), ")
+# results: succesful
 
 t1 = time.time()
 # build_sparse_transition_model(filename = 'GPU_test_7_', n_actions = 16, nt = 3 )
@@ -59,7 +63,14 @@ t1 = time.time()
 # build_sparse_transition_model(filename = 'GPU_test_15_', n_actions = 16, nt = 30 )
 # build_sparse_transition_model(filename = 'GPU_test_16_', n_actions = 16)
 # build_sparse_transition_model(filename = 'GPU_test_13b_', n_actions = 16, nt = 30 )
-build_sparse_transition_model(filename = 'GPU_test_17_', n_actions = 16)
+
+
+# build_sparse_transition_model(filename = 'GPU_test_17_', n_actions = 16)
+
+from utils.build_model_GPU_for_rzn_list import build_sparse_transition_model
+all_Yi = np.load(join(ROOT_DIR, 'Input_data_files/nT_60/all_Yi_mat_train_id_list_1.npy'))
+build_sparse_transition_model(filename = 'DG_model_2500_train_id_list_1_',all_Yi=all_Yi, wanted_nrzns = 2500, n_actions = 16)
+
 
 
 
