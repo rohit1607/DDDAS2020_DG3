@@ -121,7 +121,7 @@ def build_experience_buffer(grid, vel_field_data, nmodes, paths, sampling_interv
                 # if (s1[1],s1[2])!=(s2[1],s2[2]):
                 # print(s1,p1,p2, vx, vy)
                 a1 = Calculate_action(s1, s2, p1, p2, vx, vy, grid, coord_traj_theta= False)
-                r1 = grid.move_exact(a1, vx, vy)
+                r1 = grid.move_exact(a1, vx, vy, k)
                 s_next = grid.current_state()
                 # if grid.current_state() != s2:
                 #     print("**** mismatch: ",s1, a1, s2, grid.current_state())

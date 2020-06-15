@@ -10,6 +10,8 @@ import ast
 import random
 from explict_plot import plot_and_return_exact_trajectory_set_train_data
 import argparse
+from collections import deque
+
 
 # def sas_match(query_s1_a_s2, s1_a_r_s2):
 #     """
@@ -74,23 +76,23 @@ import argparse
 #     return matched_rzns
 
 
-def get_similar_rzn_ids(query_s1_a_s2, g, vel_field_data, nmodes):
+def get_similar_rzn_ids(query_cs1_a_s2, g, vel_field_data, nmodes):
 
-    s1, a, s2 = query_s1_a_s2
-    t, i, j = s1
-    matched_rzns = []
+    cs1, a, s2 = query_cs1_a_s2
+    t, x, y, i, j = cs1
+    matched_rzns = set()
     for rzn in train_id_list:
         # vx = Vx_rzns[rzn,i,j]
         # vy = Vy_rzns[rzn,i,j]
         vx, vy = extract_velocity(vel_field_data, t, i, j, rzn)
-        g.set_state(s1)
+        g.set_state((t, i, j), xcoord = x, ycoord = y)
         g.move_exact(a, vx, vy)
+        # assert(t == s2[0]), "damn"
         if g.current_state() == s2:
-            matched_rzns.append(rzn)
+            matched_rzns.add(rzn)
 
     return matched_rzns
 
-# 
 
 def update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s1, rzn, eps):
     """
@@ -112,7 +114,7 @@ def update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s1, rzn, eps):
         t, i, j = s1
         a1 = stochastic_action_eps_greedy(dummy_policy, s1, g, eps, Q=Q)
         vx, vy = extract_velocity(vel_field_data, t, i, j, rzn)
-        r = g.move_exact(a1, vx, vy)
+        r = g.move_exact(a1, vx, vy, rzn)
         # r = g.move_exact(a1, Vx_rzns[rzn, i, j], Vy_rzns[rzn, i, j])
         s2 = g.current_state()
         # if g.is_terminal() or (not g.if_within_actionable_time()):
@@ -139,31 +141,45 @@ def update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s1, rzn, eps):
 
 
 
-def update_Q_in_future_rollouts(g, Q, N, s1_a_s2, vel_field_data, nmodes, loop_count):
-    s1, a, s2 = s1_a_s2
-    # find out which realisations
-    # hava teh same transition of s1 -> a -> s2
-    matched_rzns = get_similar_rzn_ids(s1_a_s2, g, vel_field_data, nmodes)
-    # matched_rzns = get_similar_rzn_ids_V2(s1_a_s2, g, vel_field_data, nmodes)
-    # print("len(matched_rzns)", len(matched_rzns))
-    num_matched_rzns = len(matched_rzns)
-    print("matched_rzns: at transition: ", s1_a_s2, '; n_mathces= ', num_matched_rzns)
-    if num_matched_rzns != 0:
-        if num_matched_rzns > sample_size:
-            sample_matched_rzns = random.sample(matched_rzns, sample_size)
-        else:
-            sample_matched_rzns = random.sample(matched_rzns, num_matched_rzns)
-        print("sample_matched_rzns: ", sample_matched_rzns)
-        for rzn in sample_matched_rzns:
+def update_Q_in_future_rollouts(g, Q, N, cs1as2_list, vel_field_data, nmodes, loop_count):
+
+    #initialise a list of sets
+    assert(len(cs1as2_list) == rollout_interval), "check bro"
+    set_list = [ ] #list of match_rzn_sets
+
+    # get current state from latest transition. latest items are leftmost in list
+    _,_,s2 = cs1as2_list[0]
+    check_t, _, _ = s2
+    assert(check_t%rollout_interval == 0), "checkkk brooo"
+
+    #build sets for each tranisition
+    for cs1_a_s2 in cs1as2_list:
+        # match_rzn_set is set of mathcing realisation
+        match_rzn_set = get_similar_rzn_ids(cs1_a_s2, g, vel_field_data, nmodes)
+        set_list.append(match_rzn_set)
+
+    #find set intersection
+    for i in range(1, len(set_list)):
+        set_list[0] = set_list[0].intersection(set_list[i])
+        print("***** CHECK intetsiction size ***** ", len(set_list[0]))
+    intersection_rzns = set_list[0]
+    if len(intersection_rzns)<50:
+        print("***** CHECK intersection set ", intersection_rzns)
+
+    # update Q,N for rzns in intersection_rzns
+    for rzn in intersection_rzns:
+        for ntimes in range(num_rollouts):
             Q, N = update_Q_in_future_kth_rzn(g, Q, N, vel_field_data, nmodes, s2, rzn, eps_0)
-            
+
     return Q, N
 
 
 
 def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname):
-
-    g, xs, ys, X, Y, vel_field_data, nmodes, _, _, _, _ = setup_grid_params
+# g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str
+    g, xs, ys, X, Y, vel_field_data, nmodes, _, paths, _, _ = setup_grid_params
+    g.make_bcrumb_dict(paths, train_id_list)
+   
     gcopy = copy.deepcopy(g)
     # Copy Q to Qcopy
 
@@ -205,6 +221,10 @@ def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname)
         Qcopy = copy.deepcopy(Q)
         Ncopy = copy.deepcopy(N)
         rzn = test_id_list[k]
+
+        init_list = [None for i in range(rollout_interval)]
+        cs1as2_list = deque(init_list)         #to keep a fixed lenght list representation  
+
         print("-------- In rzn ", rzn, " of test_id_list ---------")
         g.set_state(g.start_state)
         dont_plot =False
@@ -215,6 +235,7 @@ def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname)
 
         s1 = g.start_state
         t, i, j = s1
+        cs1 = (t, g.x, g.y ,i, j)
         a, q_s_a = max_dict(Qcopy[s1])
 
         xtr.append(g.x)
@@ -229,17 +250,32 @@ def run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N, fpath, fname)
             # r = g.move_exact(a, Vx_rzns[rzn, i, j], Vy_rzns[rzn, i, j])
             s2 = g.current_state()
             (t, i, j) = s2
+            cs1_a_s2 = (cs1, a, s2)
+
+            # keep n latest transitions where n = rollout_interval
+            cs1as2_list.pop()
+            cs1as2_list.appendleft(cs1_a_s2)
 
             xtr.append(g.x)
             ytr.append(g.y)
+
 
             if g.if_edge_state((i,j)):
                 bad_count += 1
                 # dont_plot=True
                 break
             if (not g.is_terminal(almost = True)) and  g.if_within_actionable_time():
-                Qcopy, Ncopy = update_Q_in_future_rollouts(gcopy, Qcopy, Ncopy, (s1, a, s2), vel_field_data, nmodes, loop_count)
+                if loop_count % rollout_interval == 0:
+                    print("------------loopcount/mission_time =", loop_count)
+                    # for kk in range(len(cs1as2_list)):
+                    #     check_cs1_a_s2 = cs1as2_list[kk]
+                    #     check_cs1 = check_cs1_a_s2[0]
+                    #     check_s2 = check_cs1_a_s2[2]
+                    #     tij1 = (check_cs1[0],check_cs1[3],check_cs1[4])
+                        # print("check: ", tij1, check_s2)
+                    Qcopy, Ncopy = update_Q_in_future_rollouts(gcopy, Qcopy, Ncopy, cs1as2_list, vel_field_data, nmodes, loop_count)
                 s1 = s2 #for next iteration of loop
+                cs1 = (t, g.x, g.y, i, j)
                 a, q_s_a = max_dict(Qcopy[s1])
             elif g.is_terminal(almost = True):
                 break
@@ -294,9 +330,10 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     # sars_traj_list = read_pickled_File(join(exp_num_case_dir, 'sars_traj_Train_Trajectories_after_exp'))
     train_output_params = read_pickled_File(join(exp_num_case_dir, 'output_paramaters'))
 
+    print("*********** 1 **************\n")
     ALPHA = train_output_params[9]
     N_inc = train_output_params[11]
-    eps_0 = 0.1
+    eps_0 = 0.05
 
     print("ALPHA, N_inc = ", ALPHA, N_inc)
     # print('len(sars_traj_list) = ', len(sars_traj_list))
@@ -305,6 +342,8 @@ def run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfna
     print('n_test_paths_range = ', n_test_paths_range)
     t_list, bad_count = run_and_plot_onboard_routing_episodes(setup_grid_params, Q, N,
                                               exp_num_case_dir, opfname )
+
+    print("*********** 2 **************\n")
 
     phase2_results = calc_mean_and_std(t_list)
     picklePolicy(phase2_results,join(exp_num_case_dir, opfname))
@@ -349,23 +388,30 @@ args = parser.parse_args()
 
 global n_test_paths_range
 global run_number
-global sample_size
+global num_rollouts
+global rollout_interval
+
 
 n_start = args.n_start
 n_end = args.n_end
 # n_test_paths_range = [250, 500]
 n_test_paths_range = [n_start, n_end]
 
-sample_size = 50
+rollout_interval= 4
+num_rollouts = 1
 
-run_number = 10000 + n_start
+# run_number = 10000 + n_start
+run_number = str(rollout_interval) + '_' + str(num_rollouts)
 setup_grid_params = setup_grid(num_actions=16)
 opfname = 'phase_2_test_' + str(run_number)
 # rel_path = 'Experiments/55/QL/num_passes_50/QL_Iter_x1/dt_size_2000/ALPHA_0.05/eps_0_0.1'
 # rel_path = 'Experiments/104/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
 # rel_path = 'Experiments/95/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
 # rel_path = 'Experiments/111/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
-rel_path = 'Experiments/118/QL/num_passes_50/QL_Iter_x1/dt_size_4000/ALPHA_0.05/eps_0_0.1'
+# rel_path = 'Experiments/118/QL/num_passes_50/QL_Iter_x1/dt_size_4000/ALPHA_0.05/eps_0_0.1'
+
+# rel_path = 'Experiments/126/QL/num_passes_50/QL_Iter_x1/dt_size_5000/ALPHA_0.05/eps_0_0.1'
+rel_path = 'Experiments/128/QL/num_passes_50/QL_Iter_x1/dt_size_5000/ALPHA_0.05/eps_0_0.1'
 exp_num_case_dir = join(ROOT_DIR, rel_path)
 
 run_onboard_routing_for_test_data(exp_num_case_dir, setup_grid_params, opfname)

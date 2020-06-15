@@ -56,7 +56,7 @@ def run_QL(setup_grid_params, QL_params, QL_path, exp_num):
                 for ALPHA in ALPHA_list:
                     for dt_size in Training_traj_size_list:
 
-                        test_size = useful_num_rzns - dt_size   #number of trajetcories to be used for testing
+                        # test_size = useful_num_rzns - dt_size   #number of trajetcories to be used for testing
                         t_start_case = time.time()
                         dir_path = exp + '/num_passes_' + str(num_passes) + '/QL_Iter_x' + str(QL_Iters_x) + '/dt_size_' + str(dt_size) + '/ALPHA_' + str(ALPHA) + '/eps_0_' + str(eps_0) +'/'
                         case+=1
@@ -72,10 +72,10 @@ def run_QL(setup_grid_params, QL_params, QL_path, exp_num):
                         print("num_actions= ", num_actions)
 
                         # get respective indices fo trajectories for training and testing:
-                        train_id_list, test_id_list, train_id_set, test_id_set, goodlist = get_rzn_ids_for_training_and_testing(dt_size, useful_num_rzns, paths)
+                        train_id_list, test_id_list, train_id_set, test_id_set, goodlist = get_rzn_ids_for_training_and_testing()
 
                         print("$$$$ check in TQ : train_id_list", train_id_list[0:20])
-                        print("test_size= ", test_size)
+                        # print("test_size= ", test_size)
                         print("len_goodlist \n", len(goodlist))
 
 

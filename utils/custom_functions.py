@@ -661,14 +661,14 @@ def get_list_of_rzns_without_lengthy_pde_paths(paths, target_num_rzns):
 #     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
 
 
-def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
-    goodlist = [i for i in range(target_num_rzns)]
-    id_list = goodlist
-    train_id_list = id_list[0:dt_size]
-    test_id_list = id_list[dt_size:target_num_rzns]
-    train_id_list.sort()
-    test_id_list.sort()
-    return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
+# def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
+#     goodlist = [i for i in range(target_num_rzns)]
+#     id_list = goodlist
+#     train_id_list = id_list[0:5000]
+#     test_id_list = id_list[4000:5000]
+#     train_id_list.sort()
+#     test_id_list.sort()
+#     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
 
 # def get_rzn_ids_for_training_and_testing_v2(useful_num_rzns, dt_size):
 #     id_list = [i for i in range(useful_num_rzns)] #[0..4999]
@@ -676,6 +676,14 @@ def get_rzn_ids_for_training_and_testing(dt_size, target_num_rzns, paths):
 #     test_id_list = id_list[dt_size:useful_num_rzns]
 #     return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
 
+
+def get_rzn_ids_for_training_and_testing():
+    goodlist = [i for i in range(5000)]
+    id_list = goodlist
+    train_id_list = goodlist
+    test_id_list = id_list[4000:5000]
+
+    return train_id_list, test_id_list,  set(train_id_list), set(test_id_list), goodlist
 
 def print_sorted_Qs_kvs(g, Q, state):
     x = Q[state] #x is a dictionary of k: actions, v: action-values

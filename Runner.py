@@ -103,16 +103,16 @@ def run_Experiment(DP = None, QL = None):
 
 
 
-# employ argparse to run code from commanline
-parser = argparse.ArgumentParser(description='Take parameters as input args.')
-# parser.add_argument('num_passes', type=int, help='number of passes for learning data from trajectories')
-# parser.add_argument('QL_Iters', type=int, help='number of QL iters in regfiniement phase')
-# parser.add_argument('eps0_list', metavar='eps0_list', type=float, nargs='+',help='eps0_list')
-# parser.add_argument('eps_dec_method', type=int, help='1= dec to 0.05 eps0; 2= dec to 0.5eps0')
-# parser.add_argument('N_inc', type=float, help='increment parameter for Nsa')
-parser.add_argument('dt_size', type=int, help='training data size 0-5000')
+# # employ argparse to run code from commanline
+# parser = argparse.ArgumentParser(description='Take parameters as input args.')
+# # parser.add_argument('num_passes', type=int, help='number of passes for learning data from trajectories')
+# # parser.add_argument('QL_Iters', type=int, help='number of QL iters in regfiniement phase')
+# # parser.add_argument('eps0_list', metavar='eps0_list', type=float, nargs='+',help='eps0_list')
+# # parser.add_argument('eps_dec_method', type=int, help='1= dec to 0.05 eps0; 2= dec to 0.5eps0')
+# # parser.add_argument('N_inc', type=float, help='increment parameter for Nsa')
+# parser.add_argument('dt_size', type=int, help='training data size 0-5000')
 
-args = parser.parse_args()
+# args = parser.parse_args()
 
 
 # Training_traj_size_list, ALPHA_list, esp0_list, QL_Iters, init_Q, with_guidance = QL_params
@@ -123,32 +123,45 @@ model_file = 'DG_model_2500_train_id_list_1_3D_60nT_a16'
 g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid_params
 # Paramerers for QL
 #Traing data size
-dt_size = args.dt_size
+# dt_size = args.dt_size
 
-train_id_list, test_id_list,  _, _, goodlist = get_rzn_ids_for_training_and_testing(dt_size, useful_num_rzns, paths)
-g.make_bcrumb_set(paths, train_id_list)
+train_id_list, test_id_list,  _, _, goodlist = get_rzn_ids_for_training_and_testing()
+
+g.make_bcrumb_dict(paths, train_id_list)
+
 print("$$$$ check: train_id_list", train_id_list[0:20])
-# print("g.bcrumb_states size= ",len(g.bcrumb_states))
-# print(g.bcrumb_states)
+print("$$$$ check: len train_id_list",len(train_id_list) )
 
-# if g.start_state in g.bcrumb_states:
-#     print(" g.start_state in g.bcrumb_states")
+# cnt =0
+# for rzn in train_id_list:
+#     if g.start_state in g.bcrumb_dict[rzn]:
+#         cnt += 1
+# print("cnt =", cnt)
+# print(g.bcrumb_dict[0])
+
+# # if g.start_state in g.bcrumb_states:
+# #     print(" g.start_state in g.bcrumb_states")
+# end_cnt = 0
 # end_i, end_j = g.endpos
-# for t in range(50,60):
-#     if (t,end_i, end_j) in g.bcrumb_states:
-#         print((t,end_i, end_j),"in g.bcrumb_states")
+# for rzn in train_id_list:
+#     for t in range(40,60):
+#         if (t,end_i, end_j) in g.bcrumb_dict[rzn]:
+#             end_cnt += 1
 
+# print("end_cnt=",end_cnt)
 # g.set_state((30, 51, 46))
 # print(g.move_exact((20,0),0,0))
 
+
+
 # Paramerers for QL
 #Traing data size
-Training_traj_size_list = [dt_size]
+Training_traj_size_list = [len(train_id_list)]
 
 # ALPHA_list = [0.05, 0.5, 1]
 ALPHA_list = [0.05]
 
-esp0_list = [0.1, 0.3]
+esp0_list = [0.1]
 # esp0_list = [0.33, 0.66, 1]
 # esp0_list = args.eps0_list
 
@@ -156,11 +169,11 @@ num_passes_list = [50]
 # num_passes_list = [20, 200]
 # num_passes_list = args.num_passes
 
-QL_Iters_multiplier_list = [1, 2] #for refinement
+QL_Iters_multiplier_list = [1] #for refinement
 # QL_Iters_multiplier_list = [1, 10, 100] #for refinement
 # QL_Iters_multiplier_list = args.QL_Iters #for refinement
 
-init_Q = -1
+init_Q = -100
 
 with_guidance = True
 
@@ -170,8 +183,8 @@ method = 'reverse_order'
 # eps_dec_method = args.eps_dec_method
 eps_dec_method_list = [1]
 
-# N_inc_list = [0.05]
-N_inc_list = [0.01, 0.05, 0.005]
+N_inc_list = [0.05]
+# N_inc_list = [0.01, 0.05, 0.005]
 # N_inc = args.N_inc
 
 cart_prod = [ ([npl], e, n) for npl in num_passes_list for e in eps_dec_method_list for n in N_inc_list]

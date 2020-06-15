@@ -41,7 +41,8 @@ class Grid:
         # self.r_otherwise = get_minus_dt
 
         self.reward_structure = ['oubound_penalty = '+ str(self.r_outbound), 'Terminal_Reward =' + str(self.r_terminal), 'General_reward: ' + self.r_otherwise.__name__]
-        self.bcrumb_states = set()
+        # self.bcrumb_states = set()
+        self.bcrumb_dict = dict.fromkeys([i for i in range(5000)])
 
 
     def compute_cell(self, s):
@@ -62,23 +63,45 @@ class Grid:
         return int(yind), int(xind)
 
 
-    def make_bcrumb_set(self, paths, train_id_list):
+    def make_bcrumb_dict(self, paths, train_id_list):
+        # initialise bcrumb_dict as dictionary of sets, with key = rzn, value = set of states
+        for key in self.bcrumb_dict.keys():
+            self.bcrumb_dict[key] = set()
+
 
         for k in train_id_list:
-            exp_buffer_kth_traj = []
             trajectory = paths[k, 0] #kth trajectory, array of shape (n,2)
 
             # append starting point to traj
             s_t = int(0)
-            state_traj = []
             for i in range(0, len(trajectory), Sampling_interval):
-                s_i, s_j = self.compute_cell( trajectory[i])         # compute indices corrsponding to first coord
-                self.bcrumb_states.add((s_t, s_i, s_j))
+                s_i, s_j = self.compute_cell( trajectory[i])         # compute indices corrsponding to first coord  
+                self.bcrumb_dict[k].add((s_t, s_i, s_j))
                 s_t += 1
 
             # add last point to the trajectories
             s_i, s_j = self.compute_cell( trajectory[-1])
-            self.bcrumb_states.add((s_t, s_i, s_j))
+            self.bcrumb_dict[k].add((s_t, s_i, s_j))
+
+        return
+
+
+    # def make_bcrumb_set(self, paths, train_id_list):
+
+    #     for k in train_id_list:
+    #         trajectory = paths[k, 0] #kth trajectory, array of shape (n,2)
+
+    #         # append starting point to traj
+    #         s_t = int(0)
+    #         state_traj = []
+    #         for i in range(0, len(trajectory), Sampling_interval):
+    #             s_i, s_j = self.compute_cell( trajectory[i])         # compute indices corrsponding to first coord  
+    #             self.bcrumb_states.add((s_t, s_i, s_j))
+    #             s_t += 1
+
+    #         # add last point to the trajectories
+    #         s_i, s_j = self.compute_cell( trajectory[-1])
+    #         self.bcrumb_states.add((s_t, s_i, s_j))
 
 
 
@@ -126,7 +149,7 @@ class Grid:
             t, i, j = query_s
             return((i,j) == self.endpos)
 
-    def move_exact(self, action, Vx, Vy):
+    def move_exact(self, action, Vx, Vy, rzn = None):
         r = 0
         if not self.is_terminal() and self.if_within_actionable_time():
             thrust, angle = action
@@ -181,8 +204,9 @@ class Grid:
                     r += self.r_outbound
 
             s_new = self.current_state()
-            if s_new in self.bcrumb_states:
-                r += self.r_terminal/100
+            if rzn != None: #if you know and have provided the rzn
+                if s_new in self.bcrumb_dict[rzn]:
+                    r += self.r_terminal/100
 
             r += self.r_otherwise(self.dt, self.xs, self.ys, s0, s_new, vnetx, vnety, action)
             # r += self.r_otherwise(self.dt) # get_minus_dt()

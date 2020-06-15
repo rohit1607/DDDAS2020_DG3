@@ -153,30 +153,30 @@ def plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_d
     return t_list, G_list, bad_count
 
 
-g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid(num_actions=16)
+# g, xs, ys, X, Y, vel_field_data, nmodes, useful_num_rzns, paths, params, param_str = setup_grid(num_actions=16)
 
-rel_path = 'Experiments/26/DP'
-exp_num_case_dir = join(ROOT_DIR, rel_path)
-policy = read_pickled_File(join(exp_num_case_dir, 'policy'))
+# rel_path = 'Experiments/26/DP'
+# exp_num_case_dir = join(ROOT_DIR, rel_path)
+# policy = read_pickled_File(join(exp_num_case_dir, 'policy'))
 
-# tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
-# with open(tlist_file, 'r') as f:
-#     phase1_tlist = ast.literal_eval(f.read())
+# # tlist_file = join(exp_num_case_dir, 'TrajTimes2.txt')
+# # with open(tlist_file, 'r') as f:
+# #     phase1_tlist = ast.literal_eval(f.read())
 
-test_id_rel_path ='Experiments/104/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
-test_id_list = read_pickled_File(join(test_id_rel_path, 'test_id_list'))
+# test_id_rel_path ='Experiments/104/QL/num_passes_50/QL_Iter_x1/dt_size_2500/ALPHA_0.05/eps_0_0.1'
+# test_id_list = read_pickled_File(join(test_id_rel_path, 'test_id_list'))
 
-global n_test_paths_range
-n_test_paths_range = [0, len(test_id_list)]
+# global n_test_paths_range
+# n_test_paths_range = [0, len(test_id_list)]
 
-t_list, G_list, bad_count = plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, test_id_list, n_test_paths_range, exp_num_case_dir, fname='Explicit_plot_DPpolicy_104_testid')
+# t_list, G_list, bad_count = plot_and_return_exact_trajectory_set_train_data(g, policy, X, Y, vel_field_data, nmodes, test_id_list, n_test_paths_range, exp_num_case_dir, fname='Explicit_plot_DPpolicy_104_testid')
 
-phase1_results = calc_mean_and_std(t_list)
-avg_time_ph1, std_time_ph1, cnt_ph1 , none_cnt_ph1 = phase1_results
-print("avg_time_ph1", avg_time_ph1,'\n', 
-        "std_time_ph1", std_time_ph1, '\n',
-        "cnt_ph1",cnt_ph1 , '\n',
-        "none_cnt_ph1", none_cnt_ph1)
+# phase1_results = calc_mean_and_std(t_list)
+# avg_time_ph1, std_time_ph1, cnt_ph1 , none_cnt_ph1 = phase1_results
+# print("avg_time_ph1", avg_time_ph1,'\n', 
+#         "std_time_ph1", std_time_ph1, '\n',
+#         "cnt_ph1",cnt_ph1 , '\n',
+#         "none_cnt_ph1", none_cnt_ph1)
 
 
 
